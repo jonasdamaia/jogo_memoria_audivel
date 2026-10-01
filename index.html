@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sinfonia da Memória - Jogo Auditivo e Colorido</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.4)); }
+            50% { filter: drop-shadow(0 0 35px rgba(255, 255, 255, 0.9)); }
+        }
+        .active-tile {
+            transform: scale(0.95);
+            filter: brightness(1.4) saturate(1.5);
+            box-shadow: 0 0 35px currentColor !important;
+        }
+        .tile-hover:hover {
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between p-4 min-h-screen">
+
+    <header class="text-center my-4">
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+            Sinfonia da Memória
+        </h1>
+        <p class="text-slate-400 text-sm md:text-base mt-1">Ouça o som, observe a cor e repita a sequência!</p>
+    </header>
+
+    <main class="flex flex-col items-center justify-center w-full max-w-md bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-slate-800 shadow-2xl">
+        
+        <!-- Scoreboard -->
+        <div class="flex justify-between w-full mb-6 px-2 text-sm md:text-base font-semibold">
+            <div class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700">
+                Nível: <span id="level-display" class="text-cyan-400 font-bold">1</span>
+            </div>
+            <div class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700">
+                Pontos: <span id="score-display" class="text-pink-400 font-bold">0</span>
+            </div>
+        </div>
+
+        <!-- Status Message Box -->
+        <div id="status-msg" class="mb-6 text-center font-semibold text-amber-300 h-8 flex items-center justify-center tracking-wide">
+            Pressione "Iniciar Jogo" para começar!
+        </div>
+
+        <!-- The 4 Color Tiles Grid -->
+        <div class="grid grid-cols-2 gap-4 w-72 h-72 md:w-80 md:h-80 mb-8">
+            <!-- Red Tile -->
+            <button id="tile-0" onclick="app.handleTileClick(0)" class="tile-hover bg-rose-600 rounded-2xl shadow-lg transition-all duration-150 cursor-pointer border-4 border-rose-500/50 flex items-center justify-center text-3xl opacity-80" data-sound="261.63">
+                🔴
+            </button>
+            <!-- Blue Tile -->
+            <button id="tile-1" onclick="app.handleTileClick(1)" class="tile-hover bg-blue-600 rounded-2xl shadow-lg transition-all duration-150 cursor-pointer border-4 border-blue-500/50 flex items-center justify-center text-3xl opacity-80" data-sound="329.63">
+                🔵
+            </button>
+            <!-- Yellow Tile -->
+            <button id="tile-2" onclick="app.handleTileClick(2)" class="tile-hover bg-amber-500 rounded-2xl shadow-lg transition-all duration-150 cursor-pointer border-4 border-amber-400/50 flex items-center justify-center text-3xl opacity-80" data-sound="392.00">
+                🟡
+            </button>
+            <!-- Green Tile -->
+            <button id="tile-3" onclick="app.handleTileClick(3)" class="tile-hover bg-emerald-600 rounded-2xl shadow-lg transition-all duration-150 cursor-pointer border-4 border-emerald-500/50 flex items-center justify-center text-3xl opacity-80" data-sound="523.25">
+                🟢
+            </button>
+        </div>
+
+        <!-- Control Button -->
+        <button id="start-btn" onclick="app.startGame()" class="w-full py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 font-bold rounded-2xl shadow-lg hover:opacity-90 active:scale-95 transition-all text-lg tracking-wider cursor-pointer">
+            Iniciar Jogo
+        </button>
+    </main>
+
+    <footer class="text-xs text-slate-500 text-center my-4">
+        Desenvolvido com Web Audio API & Tailwind CSS
+    </footer>
+
+    <script>
+        class MemorySynthGame {
+            constructor() {
+                this.sequence = [];
+                this.playerSequence = [];
+                this.level = 1;
+                this.score = 0;
+                this.isPlayingSequence = false;
+                this.audioCtx = null;
+                
+                // Frequencies for C Major chord notes (C4, E4, G4, C5)
+                this.frequencies = [261.63, 329.63, 392.00, 523.25];
+            }
+
+            initAudio() {
+                if (!this.audioCtx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.audioCtx = new AudioContext();
+                }
+                if (this.audioCtx.state === 'suspended') {
+                    this.audioCtx.resume();
+                }
+            }
+
+            playSound(freq, duration = 400) {
+                this.initAudio();
+                try {
+                    const osc = this.audioCtx.createOscillator();
+                    const gainNode = this.audioCtx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+
+                    // Envelope for smooth audio (no clicking)
+                    gainNode.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + (duration / 1000));
+
+                    osc.connect(gainNode);
+                    gainNode.connect(this.audioCtx.destination);
+
+                    osc.start();
+                    osc.stop(this.audioCtx.currentTime + (duration / 1000));
+                } catch (e) {
+                    console.error("Audio playback error:", e);
+                }
+            }
+
+            startGame() {
+                this.initAudio();
+                this.sequence = [];
+                this.level = 1;
+                this.score = 0;
+                this.updateDisplay();
+                document.getElementById('start-btn').innerText = 'Reiniciar Jogo';
+                this.nextLevel();
+            }
+
+            nextLevel() {
+                this.playerSequence = [];
+                this.isPlayingSequence = true;
+                this.updateStatus(`Nível ${this.level}: Observe a sequência...`, 'text-cyan-400');
+                
+                // Add random tile (0 to 3)
+                const randomTile = Math.floor(Math.random() * 4);
+                this.sequence.push(randomTile);
+
+                this.playSequence();
+            }
+
+            async playSequence() {
+                const delay = Math.max(300, 700 - (this.level * 35));
+                for (let i = 0; i < this.sequence.length; i++) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    const tileIndex = this.sequence[i];
+                    this.flashTile(tileIndex, delay * 0.75);
+                }
+                setTimeout(() => {
+                    this.isPlayingSequence = false;
+                    this.updateStatus('Sua vez! Repita a sequência.', 'text-emerald-400');
+                }, delay * this.sequence.length);
+            }
+
+            flashTile(index, duration = 400) {
+                const tile = document.getElementById(`tile-${index}`);
+                if (!tile) return;
+
+                tile.classList.add('active-tile');
+                tile.style.opacity = '1';
+                this.playSound(this.frequencies[index], duration);
+
+                setTimeout(() => {
+                    tile.classList.remove('active-tile');
+                    tile.style.opacity = '0.8';
+                }, duration);
+            }
+
+            handleTileClick(index) {
+                if (this.isPlayingSequence) return;
+
+                this.flashTile(index, 300);
+                this.playerSequence.push(index);
+
+                const currentIndex = this.playerSequence.length - 1;
+
+                // Check if user made a mistake
+                if (this.playerSequence[currentIndex] !== this.sequence[currentIndex]) {
+                    this.gameOver();
+                    return;
+                }
+
+                // Check if user completed the current sequence
+                if (this.playerSequence.length === this.sequence.length) {
+                    this.score += this.level * 10;
+                    this.level++;
+                    this.updateDisplay();
+                    this.updateStatus('Muito bem! Próximo nível...', 'text-pink-400');
+                    this.isPlayingSequence = true;
+                    setTimeout(() => {
+                        this.nextLevel();
+                    }, 1200);
+                }
+            }
+
+            gameOver() {
+                this.playSound(150, 800); // Low error sound
+                this.updateStatus('Fim de Jogo! Sequência incorreta.', 'text-rose-500');
+                document.getElementById('start-btn').innerText = 'Jogar Novamente';
+                this.isPlayingSequence = true;
+            }
+
+            updateStatus(msg, colorClass) {
+                const msgEl = document.getElementById('status-msg');
+                msgEl.innerText = msg;
+                msgEl.className = `mb-6 text-center font-semibold h-8 flex items-center justify-center tracking-wide ${colorClass}`;
+            }
+
+            updateDisplay() {
+                document.getElementById('level-display').innerText = this.level;
+                document.getElementById('score-display').innerText = this.score;
+            }
+        }
+
+        const app = new MemorySynthGame();
+    </script>
+</body>
+</html>
