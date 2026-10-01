@@ -1,12 +1,8 @@
-https://jonasdamaia.github.io/jogo_memoria_audivel/
-
 # 🎵 Sinfonia da Memória (Audio & Color Memory Game)
 
 > Um jogo de memória interativo inspirado no clássico Genius, desenvolvido com **HTML5**, **Tailwind CSS**, e a poderosa **Web Audio API** para síntese sonora em tempo real.
 
-![Preview do Jogo](https://img.shields.io/badge/Status-Conclu%C3%ADdo-brightgreen)
-![Licença](https://img.shields.io/badge/License-MIT-blue.svg)
-![Tecnologias](https://img.shields.io/badge/Tech-HTML5%20%7C%20Tailwind%20CSS%20%7C%20Vanilla%20JS-purple)
+▶️ [Jogar agora](https://jonasdamaia.github.io/jogo_memoria_audivel/)
 
 ---
 
